@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Home as HomeIcon, 
   FileText, 
@@ -346,6 +346,10 @@ export default function App() {
   const [isLocked, setIsLocked] = useState(() => load('libera_app_locked', true));
   const [activeTab, setActiveTab] = useState('home');
   const [isOfficeMode, setIsOfficeMode] = useState(false);
+  const [showOfficeAuth, setShowOfficeAuth] = useState(false);
+  const [officeAuthCode, setOfficeAuthCode] = useState('');
+  const secretCounter = useRef(0);
+  const secretTimer = useRef(null);
   const [owner, setOwner] = useState(() => load('libera_owner_profile', null));
   const [pin, setPin] = useState(() => load('libera_owner_pin', ''));
   
@@ -453,15 +457,68 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto bg-brand-bg shadow-2xl relative overflow-hidden">
       {/* Header */}
-      <header className="bg-brand-dark text-white px-6 py-4 flex justify-between items-center shrink-0 no-print">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Libera Ecosystem</h1>
-          <p className="text-[10px] text-slate-400 uppercase tracking-widest">Accesso Personale Locale</p>
+      <header className="bg-brand-dark text-white px-6 py-4 flex justify-between items-center shrink-0 no-print select-none">
+        <div 
+          className="flex-1 active:bg-white/5 transition-colors rounded-lg p-1 -ml-1"
+          onClick={() => {
+            secretCounter.current++;
+            clearTimeout(secretTimer.current);
+            
+            if (secretCounter.current >= 5) {
+              setShowOfficeAuth(true);
+              secretCounter.current = 0;
+            } else {
+              secretTimer.current = setTimeout(() => {
+                secretCounter.current = 0;
+              }, 3000);
+            }
+          }}
+        >
+          <h1 className="text-xl font-bold tracking-tight pointer-events-none">Libera Ecosystem</h1>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest pointer-events-none">Accesso Personale Locale</p>
         </div>
         <button onClick={handleLogout} className="p-2 hover:bg-white/10 rounded-full transition-colors">
           <LogOut size={20} />
         </button>
       </header>
+
+      {/* Office Auth Modal */}
+      {showOfficeAuth && (
+        <div className="fixed inset-0 bg-brand-dark/95 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="w-full max-w-xs space-y-6 text-center">
+            <div className="flex justify-center">
+              <ShieldCheck size={64} className="text-brand-accent animate-pulse" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-white">Area Riservata</h2>
+              <p className="text-sm text-slate-400 uppercase tracking-widest">Inserisci Codice Ufficio</p>
+            </div>
+            <input 
+              autoFocus
+              className="input bg-white/10 border-white/20 text-white text-center text-2xl tracking-[0.5em] font-mono" 
+              type="password" 
+              placeholder="••••"
+              value={officeAuthCode}
+              onChange={e => {
+                const val = e.target.value.toUpperCase();
+                setOfficeAuthCode(val);
+                if (val === "OFFICE2026") {
+                  setIsOfficeMode(true);
+                  setActiveTab('ufficio');
+                  setShowOfficeAuth(false);
+                  setOfficeAuthCode('');
+                }
+              }}
+            />
+            <button 
+              onClick={() => { setShowOfficeAuth(false); setOfficeAuthCode(''); }}
+              className="text-slate-500 text-xs uppercase font-bold tracking-widest hover:text-white transition-colors"
+            >
+              Annulla Accesso
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-6 pb-24 no-scrollbar">
@@ -473,7 +530,7 @@ export default function App() {
         {activeTab === 'risorse' && <Risorse state={risorseState} setState={setRisorseState} />}
         {activeTab === 'missioni' && <Missioni missioni={missioni} />}
         {activeTab === 'mercatino' && <Mercatino mercatino={mercatino} setMercatino={setMercatino} />}
-        {activeTab === 'admin' && <Admin owner={owner} setOwner={setOwner} pin={pin} setPin={setPin} handleReset={handleReset} istanze={istanze} setIstanze={setIstanze} setIsOfficeMode={setIsOfficeMode} />}
+        {activeTab === 'admin' && <Admin owner={owner} setOwner={setOwner} pin={pin} setPin={setPin} handleReset={handleReset} istanze={istanze} setIstanze={setIstanze} />}
         {isOfficeMode && activeTab === 'ufficio' && <DashboardUfficio onClose={() => { setIsOfficeMode(false); setActiveTab('home'); }} />}
       </main>
 
@@ -1646,23 +1703,36 @@ function DashboardUfficio({ onClose }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const [tab, setTab] = useState('istanze'); // 'istanze' | 'imbarchi'
+  const [printItem, setPrintItem] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Nota: Richiede doGet nello script Apps Script per funzionare realmente
       const res = await fetch(WEBHOOK_URL);
+      if (!res.ok) throw new Error("Risposta non valida dal server");
+      
       const json = await res.json();
       if (Array.isArray(json)) {
-        setData(json.reverse()); // I più recenti in alto
+        // Normalizziamo le chiavi per essere sicuri che corrispondano (tutto minuscolo, niente spazi)
+        const normalized = json.map(item => {
+          const newItem = {};
+          Object.keys(item).forEach(key => {
+            const normalizedKey = key.toLowerCase().replace(/\s+/g, '');
+            newItem[normalizedKey] = item[key];
+          });
+          return newItem;
+        });
+        setData(normalized.reverse());
+      } else {
+        throw new Error("Formato dati non valido");
       }
     } catch (e) {
       console.error("Errore fetch ufficio:", e);
-      // Dati di esempio se il fetch fallisce (es. CORS o script non aggiornato)
+      // Dati di esempio se il fetch fallisce
       setData([
-        { timestamp: '2026-03-09 10:30', nomecompleto: 'Mario Rossi', matricola: 'MR123', tipoEvento: 'ISTANZA', tipoIstanza: 'Richiesta Permesso', testoRichiesta: 'Si richiede permesso per motivi familiari urgenti.', motivazioneLibera: 'Visita medica specialistica.' },
-        { timestamp: '2026-03-09 09:15', nomecompleto: 'Luigi Bianchi', matricola: 'LB456', tipoEvento: 'IMBARCO', imbarcazione: 'Nave Vespucci', turno: 'Mattina', note: 'Servizio regolare.' },
-        { timestamp: '2026-03-08 18:00', nomecompleto: 'Anna Verdi', matricola: 'AV789', tipoEvento: 'ISTANZA', tipoIstanza: '150 ore diritto studio', testoRichiesta: 'Richiesta fruizione ore per esame universitario.', motivazioneLibera: 'Esame di Diritto Privato.' }
+        { timestamp: '2026-03-09 10:30', nomecompleto: 'Mario Rossi', matricola: 'MR123', tipoevento: 'ISTANZA', tipoistanza: 'Richiesta Permesso', testorichiesta: 'Si richiede permesso per motivi familiari urgenti.', motivazionelibera: 'Visita medica specialistica.' },
+        { timestamp: '2026-03-09 09:15', nomecompleto: 'Luigi Bianchi', matricola: 'LB456', tipoevento: 'IMBARCO', imbarcazione: 'Nave Vespucci', turno: 'Mattina', note: 'Servizio regolare.' },
+        { timestamp: '2026-03-08 18:00', nomecompleto: 'Anna Verdi', matricola: 'AV789', tipoevento: 'ISTANZA', tipoistanza: '150 ore diritto studio', testorichiesta: 'Richiesta fruizione ore per esame universitario.', motivazionelibera: 'Esame di Diritto Privato.' }
       ]);
     }
     setLoading(false);
@@ -1676,12 +1746,12 @@ function DashboardUfficio({ onClose }) {
   }, []);
 
   const filtered = data.filter(item => {
-    const searchStr = `${item.nomecompleto} ${item.matricola} ${item.imbarcazione || ''} ${item.tipoIstanza || ''}`.toLowerCase();
+    const searchStr = `${item.nomecompleto || item.nome || ''} ${item.matricola || ''} ${item.imbarcazione || ''} ${item.tipoistanza || ''}`.toLowerCase();
     return searchStr.includes(filter.toLowerCase());
   });
 
-  const istanze = filtered.filter(i => i.tipoEvento === 'ISTANZA' || i.tipoIstanza);
-  const imbarchi = filtered.filter(i => i.tipoEvento === 'IMBARCO' || i.imbarcazione);
+  const istanze = filtered.filter(i => i.tipoevento === 'ISTANZA' || i.tipoistanza || i.idistanza);
+  const imbarchi = filtered.filter(i => i.tipoevento === 'IMBARCO' || i.imbarcazione);
 
   return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col overflow-hidden">
@@ -1719,22 +1789,25 @@ function DashboardUfficio({ onClose }) {
             <div key={idx} className="card p-6 space-y-4 relative group">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-[10px] font-bold text-brand-primary uppercase tracking-widest">{i.tipoIstanza || 'Istanza'}</span>
-                  <h3 className="text-lg font-bold">{i.nomecompleto}</h3>
+                  <span className="text-[10px] font-bold text-brand-primary uppercase tracking-widest">{i.tipoistanza || 'Istanza'}</span>
+                  <h3 className="text-lg font-bold">{i.nomecompleto || i.nome}</h3>
                   <p className="text-xs text-slate-500">Matricola: {i.matricola} • {i.timestamp}</p>
                 </div>
-                <button onClick={() => { window.focus(); window.print(); }} className="p-2 text-slate-300 hover:text-brand-primary no-print">
+                <button 
+                  onClick={() => setPrintItem(i)} 
+                  className="p-2 text-slate-300 hover:text-brand-primary no-print"
+                >
                   <Printer size={20} />
                 </button>
               </div>
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
                 <p className="text-xs font-bold text-slate-400 uppercase mb-2">Testo Richiesta</p>
-                <p className="text-sm text-slate-700 leading-relaxed">{i.testoRichiesta}</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{i.testorichiesta}</p>
               </div>
-              {i.motivazioneLibera && (
+              {i.motivazionelibera && (
                 <div className="border-l-4 border-brand-accent pl-4 py-1">
                   <p className="text-xs font-bold text-slate-400 uppercase mb-1">Motivazione Libera</p>
-                  <p className="text-sm italic text-slate-600">{i.motivazioneLibera}</p>
+                  <p className="text-sm italic text-slate-600">{i.motivazionelibera}</p>
                 </div>
               )}
             </div>
@@ -1755,7 +1828,7 @@ function DashboardUfficio({ onClose }) {
                   {imbarchi.map((i, idx) => (
                     <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50">
                       <td className="px-4 py-3 text-slate-500">{i.data || i.timestamp}</td>
-                      <td className="px-4 py-3 font-bold">{i.nomecompleto}</td>
+                      <td className="px-4 py-3 font-bold">{i.nomecompleto || i.nome}</td>
                       <td className="px-4 py-3">{i.imbarcazione}</td>
                       <td className="px-4 py-3"><span className="px-2 py-0.5 bg-brand-primary/10 text-brand-primary rounded text-[10px] font-bold">{i.turno}</span></td>
                     </tr>
@@ -1775,23 +1848,98 @@ function DashboardUfficio({ onClose }) {
       <footer className="p-4 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 text-center no-print">
         Dashboard Amministrativa Riservata • Libera Ecosystem 2026
       </footer>
+
+      {/* Print Overlay / Preview Modal */}
+      {printItem && (
+        <div className="fixed inset-0 bg-brand-dark/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-scrollbar overflow-y-auto">
+          <div className="bg-white w-full max-w-4xl my-8 rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center no-print">
+              <h3 className="font-bold text-slate-900">Anteprima di Stampa</h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => window.print()} 
+                  className="btn btn-primary py-2 px-4 text-xs flex items-center gap-2"
+                >
+                  <Printer size={16} /> Conferma Stampa
+                </button>
+                <button 
+                  onClick={() => setPrintItem(null)} 
+                  className="btn btn-secondary py-2 px-4 text-xs"
+                >
+                  Chiudi
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Content */}
+            <div className="flex-1 overflow-y-auto p-8 sm:p-12 text-black bg-white rounded-b-2xl">
+              <div className="space-y-8 print:m-0">
+                <div className="flex justify-between items-start border-b-2 border-black pb-6">
+                  <div>
+                    <h1 className="text-3xl font-bold uppercase tracking-tighter">Libera Ecosystem</h1>
+                    <p className="text-sm font-bold text-slate-500 uppercase">Ufficio Amministrativo • Istanza Digitale</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold">ID: {printItem.idistanza || 'N/A'}</p>
+                    <p className="text-sm text-slate-500">Data: {printItem.timestamp}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase text-slate-400">Richiedente</p>
+                    <p className="text-xl font-bold">{printItem.nomecompleto || printItem.nome}</p>
+                    <p className="text-sm">Matricola: {printItem.matricola}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase text-slate-400">Tipologia Istanza</p>
+                    <p className="text-xl font-bold">{printItem.tipoistanza || 'Istanza Generica'}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4">
+                  <div className="border-2 border-slate-100 p-6 rounded-xl">
+                    <p className="text-[10px] font-bold uppercase text-slate-400 mb-3">Testo della Richiesta</p>
+                    <p className="text-lg leading-relaxed whitespace-pre-wrap">{printItem.testorichiesta}</p>
+                  </div>
+
+                  {printItem.motivazionelibera && (
+                    <div className="border-l-4 border-black pl-6 py-2">
+                      <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Motivazione Libera / Note</p>
+                      <p className="text-lg italic text-slate-700">{printItem.motivazionelibera}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-24 grid grid-cols-2 gap-20">
+                  <div className="text-center border-t border-slate-200 pt-4">
+                    <p className="text-[10px] font-bold uppercase text-slate-400 mb-8">Firma del Richiedente</p>
+                    <div className="h-px bg-slate-200 w-full mb-2"></div>
+                    <p className="text-sm font-bold">{printItem.nomecompleto || printItem.nome}</p>
+                  </div>
+                  <div className="text-center border-t border-slate-200 pt-4">
+                    <p className="text-[10px] font-bold uppercase text-slate-400 mb-8">Timbro e Firma Ufficio</p>
+                    <div className="h-px bg-slate-200 w-full mb-2"></div>
+                    <p className="text-sm font-bold">L&apos;Ufficiale Addetto</p>
+                  </div>
+                </div>
+
+                <div className="pt-12 text-center">
+                  <p className="text-[8px] text-slate-300 uppercase tracking-widest">Documento generato digitalmente tramite Libera Ecosystem • Autenticità Verificata</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function Admin({ owner, setPin, handleReset, istanze, setIstanze, setIsOfficeMode }) {
+function Admin({ owner, setPin, handleReset, istanze, setIstanze }) {
   const [showPinChange, setShowPinChange] = useState(false);
   const [newPin, setNewPin] = useState('');
-  const [officeCode, setOfficeCode] = useState('');
-
-  const checkOfficeCode = () => {
-    if (officeCode === "OFFICE2026") {
-      setIsOfficeMode(true);
-      alert("Modalità Ufficio Attivata. Troverai la Dashboard nel menu.");
-    } else {
-      alert("Codice Ufficio Errato.");
-    }
-  };
 
   const updatePin = () => {
     if (newPin.length >= 4) {
@@ -1906,22 +2054,6 @@ function Admin({ owner, setPin, handleReset, istanze, setIstanze, setIsOfficeMod
         <button onClick={handleReset} className="btn btn-secondary w-full gap-3 py-4 text-red-500 hover:bg-red-50 border-red-100">
           <RefreshCw size={18} /> Reset Completo Applicazione
         </button>
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-widest">Accesso Ufficio</h3>
-        <div className="card p-4 space-y-3">
-          <p className="text-[10px] text-slate-500">Inserisci il codice autorizzativo per accedere alla Dashboard Amministratore.</p>
-          <div className="flex gap-2">
-            <input 
-              className="input py-2" 
-              placeholder="Codice Ufficio" 
-              value={officeCode} 
-              onChange={e => setOfficeCode(e.target.value)} 
-            />
-            <button className="btn btn-primary py-2 px-4" onClick={checkOfficeCode}>Attiva</button>
-          </div>
-        </div>
       </section>
 
       <section className="space-y-4">

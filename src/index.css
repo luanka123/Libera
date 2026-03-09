@@ -118,6 +118,11 @@
 }
 
 @media print {
+  html, body, #root, .flex-col.h-screen {
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+  }
   .no-print {
     display: none !important;
   }
@@ -140,4 +145,11 @@
     -webkit-line-clamp: unset !important;
     display: block !important;
   }
+  .print-only {
+    display: block !important;
+  }
+}
+
+.print-only {
+  display: none;
 }
