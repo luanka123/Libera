@@ -1,20 +1,27 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Libera Ecosystem
 
-# Run and deploy your AI Studio app
+Utility web app mobile-first per uso personale.
 
-This contains everything you need to run your app locally.
+## Installazione Locale
 
-View your app in AI Studio: https://ai.studio/apps/319a55a9-6f01-4dd7-b158-8a975235cb2e
+1. Clona la repository
+2. Installa le dipendenze:
+   ```bash
+   npm install
+   ```
+3. Avvia il server di sviluppo:
+   ```bash
+   npm run dev
+   ```
 
-## Run Locally
+## Build e Deploy
 
-**Prerequisites:**  Node.js
+1. Genera la build di produzione:
+   ```bash
+   npm run build
+   ```
+2. Carica il contenuto della cartella `dist` sulla tua repository GitHub.
+3. Assicurati che il `base` path in `vite.config.js` corrisponda al nome della tua repository.
 
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Note sulla Sicurezza
+L'accesso tramite PIN è puramente locale e serve a prevenire l'uso accidentale da parte di terzi che hanno accesso fisico al dispositivo. Non è un sistema di autenticazione server-side.

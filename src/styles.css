@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-brand-dark: #0f172a;
+    --color-brand-primary: #1e40af;
+    --color-brand-accent: #10b981;
+    --color-brand-bg: #f8fafc;
+    --color-brand-border: #e2e8f0;
+  }
+  body {
+    @apply bg-brand-bg text-brand-dark antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply bg-brand-primary text-white hover:bg-blue-900;
+  }
+  .btn-secondary {
+    @apply bg-white border border-brand-border text-brand-dark hover:bg-slate-50;
+  }
+  .btn-accent {
+    @apply bg-brand-accent text-white hover:bg-emerald-600;
+  }
+  .card {
+    @apply bg-white border border-brand-border rounded-xl shadow-sm overflow-hidden;
+  }
+  .input {
+    @apply w-full px-4 py-3 bg-white border border-brand-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all;
+  }
+  .bottom-nav-item {
+    @apply flex flex-col items-center justify-center flex-1 py-2 text-slate-400 transition-colors;
+  }
+  .bottom-nav-item.active {
+    @apply text-brand-primary;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: white;
+  }
+  .card {
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+}
